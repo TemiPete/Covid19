@@ -1,5 +1,5 @@
 
-# ========= Some intro ==============
+# ===== Some intro ======
 # This script gathers specified data for a specified country between specified dates from the ...
 #... John's hopkins Github page (https://github.com/CSSEGISandData/COVID-19) without a need to clone or fork the repo.
 # It collects data from './csse_covid_19_data/csse_covid_19_daily_reports' directly. 
@@ -10,6 +10,8 @@
 # Country name should be exactly the way it is written in the JHU Github page
 # If the country has not had any case of Covid-19 on a particular date, this script will break...
 #...So, make sure that the country has had a case of Covid on the startDate you slot in. 
+# It also adds a date column corresponding to the date the observations were gotten...
+#...This is different from the Last.Update column. 
 
 # === To Do ====
 # Get data across a list of countries
@@ -17,13 +19,13 @@
 # Get data across a list of dates (Maybe)
 # Make sure the script can gather all the columns available: easily done. 
 
-
-# ==== Script =============
+# ==== Script ====
 # rm(list=ls())
 
 library(dplyr)
 
-read.url.csv <- function(url.csv, country='') {
+read.url.csv <- function(url.csv, country='', dates) {
+    
     url.csv.data <- read.csv(url(url.csv), header=T, stringsAsFactors = F,
                              check.names = F)
     
@@ -38,11 +40,17 @@ read.url.csv <- function(url.csv, country='') {
         }
     } 
     
-    specific.data
+    cbind(dates, specific.data)
 }
 
+# === Test =====
+# url.csv <- 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/02-28-2020.csv'
+# country <- 'Canada'
+# dates <- '2020-02-28'
+# 
+# read.url.csv(url.csv, country, dates)
 
-collect.country.data <- function(some.csv.urls, country){
+collect.country.data <- function(some.csv.urls, country, dates){
     
     # So far, the script only gathers the data listed below. 
     # But it should be easy to modify this to collect others...
@@ -54,9 +62,16 @@ collect.country.data <- function(some.csv.urls, country){
     Active <- c()
     Recovered <- c()
     Province_State <- c()
+    Date <- c()
     
-    for(each in some.csv.urls) {
-        y <- read.url.csv(each, country=country)
+    for(i in 1:length(some.csv.urls)) {
+        y <- read.url.csv(some.csv.urls[i], country=country, dates[i])
+        
+        if (is.null(y$dates)) {
+            Date <- append(Date, 'NA')
+        } else {
+            Date <- append(Date, as.character(y$dates))
+        }
         
         if ('Last Update' %in% names(y)){
             Last.Update <- append(Last.Update, y$`Last Update`)
@@ -75,35 +90,43 @@ collect.country.data <- function(some.csv.urls, country){
         }
         
         if (is.null(y$Confirmed)) {
-            Confirmed <- append(Confirmed, 'NA')
+            Confirmed <- append(Confirmed, 0)
         } else {
             Confirmed <- append(Confirmed, y$Confirmed)
         }
         
         if (is.null(y$Deaths)) {
-            Deaths <- append(Deaths, 'NA')
+            Deaths <- append(Deaths, 0)
         } else {
             Deaths <- append(Deaths, y$Deaths)
         }
         
         if (is.null(y$Active)) {
-            Active <- append(Active, 'NA')
+            Active <- append(Active, 0)
         } else {
             Active <- append(Active, y$Active)
         }
         
         if (is.null(y$Recovered)) {
-            Recovered <- append(Recovered, 'NA')
+            Recovered <- append(Recovered, 0)
         } else {
             Recovered <- append(Recovered, y$Recovered)
         }
+        
     }
     
-    df <- data.frame(cbind(Province_State, Last.Update, Confirmed, Active, Deaths, Recovered))
-    
-    df
+    data.frame(cbind(Date, Province_State, Last.Update, Confirmed, Active, Deaths, Recovered))
     
 }
+
+# ====== Test =============
+# all.links <- c('https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/02-28-2020.csv',
+#                'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/02-29-2020.csv')
+# country <- 'Canada'
+# dates <- c('02-28-2020', '02-29-2020')
+# 
+# 
+# collect.country.data(all.links, country = country, dates)
 
 
 get.country.data <- function(country='', startDate='', endDate=''){
@@ -121,13 +144,17 @@ get.country.data <- function(country='', startDate='', endDate=''){
         all.links <- append(all.links, paste(base.url, each.date, '.csv', sep=''))
     }
     
-    collect.country.data(all.links, country = country)
+    collect.country.data(all.links, country = country, dates)
+    
 }
 
-# ===========Test=========== 
+# === Test ======
 # date : YYYY-mm-dd
 
-china.data <- get.country.data(country = 'China', startDate = '2020-05-15', endDate = '2020-06-02')
+canada.data <- get.country.data(country = 'Canada', startDate = '2020-03-29', endDate = '2020-04-15')
+
+
+canada.data
 
 
 
